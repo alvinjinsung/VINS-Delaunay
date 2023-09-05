@@ -3,10 +3,14 @@
 namespace dt {
 
 template<typename T>
-const std::vector<typename Delaunay<T>::TriangleType>&
-Delaunay<T>::triangulate(std::vector<VertexType> &vertices)
+std::vector<typename Delaunay<T>::TriangleType>&
+Delaunay<T>::triangulate(std::vector<VertexType> &vertices, T image_width, T image_height)
 {
 	// Store the vertices locally
+	_vertices.clear();
+	_edges.clear();
+	_triangles.clear();
+
 	_vertices = vertices;
 
 	// Determinate the super triangle
@@ -72,13 +76,34 @@ Delaunay<T>::triangulate(std::vector<VertexType> &vertices)
 		}), end(polygon));
 
 		for(const auto e : polygon)
-			_triangles.push_back(TriangleType(*e.v, *e.w, *p));
+		{
+			if (e.VertexContains(*p))
+			{
+				continue;
+			}
+
+			else
+			{
+				_triangles.push_back(TriangleType(*e.v, *e.w, *p));
+			}
+		}
+			
 
 	}
 
 	_triangles.erase(std::remove_if(begin(_triangles), end(_triangles), [p1, p2, p3](TriangleType &t){
 		return t.containsVertex(p1) || t.containsVertex(p2) || t.containsVertex(p3);
 	}), end(_triangles));
+
+	_triangles.erase(std::remove_if(begin(_triangles), end(_triangles), [image_width, image_height](TriangleType &t){
+		return (((t.a->x > image_width) || (t.a->x < 0)) || ((t.a->y > image_height) || (t.a->y < 0))
+		|| ((t.b->x > image_width) || (t.b->x < 0)) || ((t.b->y > image_height) || (t.b->y < 0))
+		|| ((t.c->x > image_width) || (t.c->x < 0)) || ((t.c->y > image_height) || (t.c->y < 0)));
+	}), end(_triangles));
+
+	_vertices.erase(std::remove_if(begin(_vertices), end(_vertices), [image_width, image_height](VertexType &v){
+		return ((v.x > image_width) || (v.x < 0)) || ((v.y > image_height) || (v.y < 0));
+	}), end(_vertices));
 
 	for(const auto t : _triangles)
 	{
@@ -91,54 +116,27 @@ Delaunay<T>::triangulate(std::vector<VertexType> &vertices)
 }
 
 template<typename T>
-const std::vector<typename Delaunay<T>::TriangleType>&
-Delaunay<T>::getTriangles() const
+std::vector<typename Delaunay<T>::TriangleType>&
+Delaunay<T>::getTriangles()
 {
 	return _triangles;
 }
 
 template<typename T>
-const std::vector<typename Delaunay<T>::EdgeType>&
-Delaunay<T>::getEdges() const
+std::vector<typename Delaunay<T>::EdgeType>&
+Delaunay<T>::getEdges()
 {
 	return _edges;
 }
 
 template<typename T>
-const std::vector<typename Delaunay<T>::VertexType>&
-Delaunay<T>::getVertices() const
+std::vector<typename Delaunay<T>::VertexType>&
+Delaunay<T>::getVertices()
 {
 	return _vertices;
-}
-
-template <typename T>
-bool Delaunay<T>::SkinnyTriangleExist()
-{
-    for (auto & t: _triangles) {
-		if (CheckSkinnyTriangle(t))
-		{
-			return true;
-		}
-	}
-
-	return false;
 }
 
 template class Delaunay<float>;
 template class Delaunay<double>;
 
 } // namespace dt
-
-
-/*template <typename T>
-bool Delaunay<T>::SkinnyTriangleExist()
-{
-    for (auto & t: _triangles) {
-		if (t.CheckSkinnyTriangle())
-		{
-			return true;
-		}
-	}
-
-	return false;
-}*/

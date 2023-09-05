@@ -315,6 +315,11 @@ void Estimator::processMeasurements()
                 }
             }
             mProcess.lock();
+
+
+            
+
+
             processImage(feature.second, feature.first);
             prevTime = curTime;
 

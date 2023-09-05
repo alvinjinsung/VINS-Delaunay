@@ -15,6 +15,13 @@ Edge<T>::operator ==(const Edge<T> &e) const
 			(*(this->v) == *e.w && *(this->w) == *e.v);
 }
 
+template <typename T>
+bool 
+Edge<T>::VertexContains(const VertexType &_v) const
+{
+    return almost_equal(((_v.y - v->y) / (_v.x - v->x)), ((_v.y - w->y) / (_v.x - w->x)));
+}
+
 template<typename U>
 std::ostream&
 operator <<(std::ostream &str, const Edge<U> &e)

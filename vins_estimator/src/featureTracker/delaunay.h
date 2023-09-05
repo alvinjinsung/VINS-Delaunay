@@ -31,12 +31,10 @@ public:
 	Delaunay(const Delaunay&) = delete;
 	Delaunay(Delaunay&&) = delete;
 
-	const std::vector<TriangleType>& triangulate(std::vector<VertexType> &vertices);
-	const std::vector<TriangleType>& getTriangles() const;
-	const std::vector<EdgeType>& getEdges() const;
-	const std::vector<VertexType>& getVertices() const;
-
-	bool SkinnyTriangleExist();
+	std::vector<TriangleType>& triangulate(std::vector<VertexType> &vertices, T image_width, T image_height);
+	std::vector<TriangleType>& getTriangles();
+	std::vector<EdgeType>& getEdges();
+	std::vector<VertexType>& getVertices();
 
 	Delaunay& operator=(const Delaunay&) = delete;
 	Delaunay& operator=(Delaunay&&) = delete;
@@ -45,6 +43,3 @@ public:
 } // namespace dt
 
 #endif
-
-
-//bool SkinnyTriangleExist();

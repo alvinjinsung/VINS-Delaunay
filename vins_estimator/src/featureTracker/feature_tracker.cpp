@@ -24,7 +24,6 @@
 #include "delaunay.h"
 
 
-
 bool FeatureTracker::inBorder(const cv::Point2f &pt)
 {
     const int BORDER_SIZE = 1;
@@ -497,19 +496,21 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
         }
     }
 
-
-
     cv::Mat img_dealunay;
-    imLeft.copyTo(img_dealunay);
+    img_dealunay = imLeft.clone();
 
     cv::Mat img_dealunay_point;
-    imLeft.copyTo(img_dealunay_point);
+    img_dealunay_point = imLeft.clone();
 
     cv::Mat img_dealunay_refine;
-    imLeft.copyTo(img_dealunay_refine);
+    img_dealunay_refine = imLeft.clone();
 
     cv::Mat img_dealunay_refine_point;
-    imLeft.copyTo(img_dealunay_refine_point);
+    img_dealunay_refine_point = imLeft.clone();
+
+    float img_width = imLeft.cols;
+    float img_height = imLeft.rows;
+
 
     std::vector<dt::Vector2<float>> points;
     std::vector<dt::Vector2<float>> points_refine;
@@ -523,14 +524,11 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
         cv::circle(img_dealunay_point, cv::Point2f(curLeftPts[i].x, curLeftPts[i].y), 5, cv::Scalar(255, 255, 0));
     }
 
-    //cv::imshow("img_delaunay_point", img_dealunay_point);
-    //cv::waitKey(10);
+
 
     dt::Delaunay<float> triangulation;
+    triangulation.triangulate(points, img_width, img_height);
 
-
-    //std::vector<dt::Triangle<float>> triangles = 
-    triangulation.triangulate(points);
     std::vector<dt::Edge<float>> edges = triangulation.getEdges();
 
     for (auto &e : edges)
@@ -538,43 +536,100 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
         float v1_x = static_cast<float>(e.v->x);
         float v1_y = static_cast<float>(e.v->y);
 
-        std::cout << "\033[1;32m v1_x: " << v1_x  << "\033[0m\n " << std::endl;
-
-
         float v2_x = static_cast<float>(e.w->x);
         float v2_y = static_cast<float>(e.w->y);
 
         cv::line(img_dealunay, cv::Point2f(v1_x, v1_y), cv::Point2f(v2_x, v2_y), cv::Scalar(255,255,255), 1, 8, 0);
     }
 
-    //cv::imshow("img_delaunay", img_dealunay);
-    //cv::waitKey(10);
-
+    
     dt::Delaunay<float> triangulation_refine;
-    triangulation_refine.triangulate(points_refine);
+    std::vector<dt::Triangle<float>> refined_triangles;
+    refined_triangles = triangulation_refine.triangulate(points_refine, img_width, img_height);
 
-    std::cout << "\033[1;32m skinny triagle exist? " << triangulation_refine.SkinnyTriangleExist() << "\033[0m\n " << std::endl;
+    bool SkinnyTriagleExist;
+    dt::Triangle<float> SkinnnyTriangle;
 
-    while(triangulation_refine.SkinnyTriangleExist())
-    {
-        for (auto & t: triangulation_refine.getTriangles())
+    for (auto & t : refined_triangles)
+    {   
+        if (t.CheckSkinnyTriangle())
         {
-            if (CheckSkinnyTriangle(t))
+            SkinnyTriagleExist = true;
+            SkinnnyTriangle = t;
+            break;
+        }
+
+        else
+        {
+            SkinnyTriagleExist = false;
+        }
+    }
+
+    int count = 0;
+
+    while (SkinnyTriagleExist)
+    {
+
+        /*if (count > 100) {
+            break;
+        }*/
+
+        //std::cout << "count: " << count << std::endl;
+
+        int same_point_indicator = 0;
+
+        for (auto & v : points_refine)
+        {
+            if (almost_equal(SkinnnyTriangle.circumcenter(), v))
             {
-                points_refine.push_back(circumcenter(t));
-                cv::circle(img_dealunay_refine_point, cv::Point2f(circumcenter(t).x, circumcenter(t).y), 5, cv::Scalar(255, 255, 0));
-
-                //std::cout << "\033[1;32m x: " << circumcenter(t).x << ", y: " << circumcenter(t).y  << "\033[0m\n " << std::endl;
-
+                same_point_indicator = 1;
                 break;
+            }
+
+            else
+            {
+                continue;
+            }
+        }
+        
+        if (same_point_indicator == 0)
+        {
+            
+            points_refine.push_back(SkinnnyTriangle.circumcenter());
+            //std:: cout << "skinny vertex a_x: " << SkinnnyTriangle.a->x << ", skinny vertex a_y: " << SkinnnyTriangle.a->y << std::endl;
+            //std:: cout << "skinny vertex b_x: " << SkinnnyTriangle.b->x << ", skinny vertex b_y: " << SkinnnyTriangle.b->y << std::endl;
+            //std:: cout << "skinny vertex c_x: " << SkinnnyTriangle.c->x << ", skinny vertex c_y: " << SkinnnyTriangle.c->y << std::endl;
+            //std::cout << "insert vertex x: " << SkinnnyTriangle.circumcenter().x << " y:_" << SkinnnyTriangle.circumcenter().y << std::endl;
+        }
+
+        else
+        {
+            continue;
+        }
+        
+        refined_triangles = triangulation_refine.triangulate(points_refine, img_width, img_height);
+
+        //std::cout << "point_refine_number: " << points_refine.size() << std::endl;
+ 
+        //std::cout << "refined_triangles_number: " << refined_triangles.size() << std::endl;
+
+        for (auto & t : refined_triangles)
+        {   
+            if (t.CheckSkinnyTriangle())
+            {
+                SkinnyTriagleExist = true;
+                SkinnnyTriangle = t;
+                break;
+            }
+
+            else
+            {
+                SkinnyTriagleExist = false;
             }
         }
 
-        triangulation_refine.triangulate(points_refine);
+        count++;
     }
-
-    //cv::imshow("img_delaunay_refine_point", img_dealunay_refine_point);
-    //cv::waitKey(10);
 
     std::vector<dt::Edge<float>> edges_refine = triangulation_refine.getEdges();
 
@@ -589,62 +644,28 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
         cv::line(img_dealunay_refine, cv::Point2f(v1_x_refine, v1_y_refine), cv::Point2f(v2_x_refine, v2_y_refine), cv::Scalar(255,255,255), 1, 8, 0);
     }
 
+    std::vector<dt::Vector2<float>> points_new = triangulation_refine.getVertices();
+
+    for (auto &v : points_new)
+    {
+        cv::circle(img_dealunay_refine_point, cv::Point2f(v.x, v.y), 5, cv::Scalar(255, 255, 0));
+    }
+
+ 
+    cv::imshow("img_delaunay", img_dealunay);
+    cv::waitKey(10);
+
+    //cv::imshow("img_delaunay_point", img_dealunay_point);
+    //cv::waitKey(10);
+
     cv::imshow("img_delaunay_refine", img_dealunay_refine);
     cv::waitKey(10);
-    
 
-    /*dt::Delaunay<float> triangulation_refine;
-    std::vector<dt::Triangle<float>> triangles_refine = triangulation_refine.triangulate(points_refine);
+    //cv::imshow("img_delaunay_refine_point", img_dealunay_refine_point);
+    //cv::waitKey(10);
 
-    int a = 0;
+    //std::cout << "\033[1;32m skinny triagle exist? " << triangulation_refine.SkinnyTriangleExist() << "\033[0m\n " << std::endl;
 
-    while (triangulation_refine.SkinnyTriangleExist())
-    {
-        for (auto & t: triangles_refine)
-        {
-            if (t.CheckSkinnyTriangle())
-            {
-                points_refine.push_back(t.circumcenter());
-                cv::circle(imLeft_refine, cv::Point2f(t.circumcenter().x, t.circumcenter().y), 5, cv::Scalar(255, 255, 0), 1, 8, 0);
-
-                break;
-            }
-
-            
-        }
-
-        a++;
-
-        triangles_refine = triangulation_refine.triangulate(points_refine);
-    }
-
-    cout << a << endl;
-
-    //cv::imshow("img_delaunay_added_point", imLeft_addedpoint);
-
-    std::vector<dt::Edge<float>> edges_refine = triangulation_refine.getEdges();
-
-    
-
-    for (auto &e : edges_refine)
-    {
-        float v1_x_refine = static_cast<float>(e.v->x);
-        float v1_y_refine = static_cast<float>(e.v->y);
-
-        float v2_x_refine = static_cast<float>(e.w->x);
-        float v2_y_refine = static_cast<float>(e.w->y);
-
-        cv::line(imLeft_refine, cv::Point2f(v1_x_refine, v1_y_refine), cv::Point2f(v2_x_refine, v2_y_refine), cv::Scalar(255,255,255), 1, 8, 0);
-    }
-
-    cv::imshow("img_delaunay_refine", imLeft_refine);
-    cv::waitKey(10);
-    
-
-    /*cv::`~~~~
-
-    cv::imshow(~, dfew)
-    cv::waitKeys(10)*/
 
     //draw prediction
     /*
@@ -656,7 +677,7 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
     //printf("predict pts size %d \n", (int)predict_pts_debug.size());
 
     //cv::Mat imCur2Compress;
-    //cv::resize(imCur2, imCur2Compress, cv::Size(cols, rows / 2));*/
+    //cv::resize(imCur2, imCur2Compress, cv::Size(cols, rows / 2));
 }
 
 

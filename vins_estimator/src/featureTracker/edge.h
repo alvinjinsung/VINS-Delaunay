@@ -20,6 +20,8 @@ struct Edge
 	Edge &operator=(Edge&&) = default;
 	bool operator ==(const Edge &e) const;
 
+	bool VertexContains(const VertexType &_v) const;
+
 	template<typename U>
 	friend std::ostream &operator <<(std::ostream &str, const Edge<U> &e);
 
