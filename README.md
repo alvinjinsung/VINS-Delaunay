@@ -27,3 +27,20 @@ Bowyer Watson algorithm is used here (https://en.wikipedia.org/wiki/Bowyer%E2%80
 Delaunay refinement is a process to to remove skinny traingles from Delaunay triangulation
 
 Ruppert's algorithm is used here (https://www.sciencedirect.com/science/article/pii/S0196677485710218, https://en.wikipedia.org/wiki/Delaunay_refinement)
+
+## VINS-Delaunay
+Specifically modified 
+
+vins_estimator/src/featureTracker/
+
+new files needed for performing Delaunay traingulation is included and feature_tracker.cpp, feature_tracker.h modified
+
+can run the system the same way VINS-Fusion is ran
+
+ex)
+
+    roslaunch vins vins_rviz.launch
+    rosrun vins vins_node ~/catkin_ws/src/VINS-Fusion/config/euroc/euroc_mono_imu_config.yaml 
+    (optional) rosrun loop_fusion loop_fusion_node ~/catkin_ws/src/VINS-Fusion/config/euroc/euroc_mono_imu_config.yaml 
+    rosbag play YOUR_DATASET_FOLDER/MH_01_easy.bag
+
